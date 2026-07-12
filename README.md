@@ -91,4 +91,5 @@ lib/
   rbac.ts         role → permission matrix
 prisma/           schema, migrations, TypeScript seeder
 supabase/         schema.sql + seed.sql for the Supabase SQL editor
+#Commiting to push
 ```

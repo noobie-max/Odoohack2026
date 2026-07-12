@@ -12,52 +12,74 @@ import {
   ClipboardCheck,
   BarChart3,
   Bell,
-  Settings,
+  Boxes,
 } from 'lucide-react'
 
-const navItems = [
-  { href: '/dashboard', icon: LayoutDashboard, label: 'Dashboard', roles: ['EMPLOYEE', 'DEPARTMENT_HEAD', 'ASSET_MANAGER', 'ADMIN'] },
-  { href: '/org-setup', icon: Building2, label: 'Organization Setup', roles: ['ADMIN'] },
-  { href: '/assets', icon: Package, label: 'Assets', roles: ['EMPLOYEE', 'DEPARTMENT_HEAD', 'ASSET_MANAGER', 'ADMIN'] },
-  { href: '/allocations', icon: ArrowLeftRight, label: 'Allocation & Transfer', roles: ['EMPLOYEE', 'DEPARTMENT_HEAD', 'ASSET_MANAGER', 'ADMIN'] },
-  { href: '/bookings', icon: Calendar, label: 'Resource Booking', roles: ['EMPLOYEE', 'DEPARTMENT_HEAD', 'ASSET_MANAGER', 'ADMIN'] },
-  { href: '/maintenance', icon: Wrench, label: 'Maintenance', roles: ['EMPLOYEE', 'DEPARTMENT_HEAD', 'ASSET_MANAGER', 'ADMIN'] },
-  { href: '/audits', icon: ClipboardCheck, label: 'Audit', roles: ['ASSET_MANAGER', 'ADMIN', 'DEPARTMENT_HEAD'] },
-  { href: '/reports', icon: BarChart3, label: 'Reports', roles: ['ASSET_MANAGER', 'ADMIN', 'DEPARTMENT_HEAD'] },
-  { href: '/notifications', icon: Bell, label: 'Notifications', roles: ['EMPLOYEE', 'DEPARTMENT_HEAD', 'ASSET_MANAGER', 'ADMIN'] },
+const navSections = [
+  {
+    title: 'Overview',
+    items: [
+      { href: '/dashboard', icon: LayoutDashboard, label: 'Dashboard', roles: ['EMPLOYEE', 'DEPARTMENT_HEAD', 'ASSET_MANAGER', 'ADMIN'] },
+      { href: '/notifications', icon: Bell, label: 'Notifications', roles: ['EMPLOYEE', 'DEPARTMENT_HEAD', 'ASSET_MANAGER', 'ADMIN'] },
+    ],
+  },
+  {
+    title: 'Operations',
+    items: [
+      { href: '/assets', icon: Package, label: 'Assets', roles: ['EMPLOYEE', 'DEPARTMENT_HEAD', 'ASSET_MANAGER', 'ADMIN'] },
+      { href: '/allocations', icon: ArrowLeftRight, label: 'Allocation & Transfer', roles: ['EMPLOYEE', 'DEPARTMENT_HEAD', 'ASSET_MANAGER', 'ADMIN'] },
+      { href: '/bookings', icon: Calendar, label: 'Resource Booking', roles: ['EMPLOYEE', 'DEPARTMENT_HEAD', 'ASSET_MANAGER', 'ADMIN'] },
+      { href: '/maintenance', icon: Wrench, label: 'Maintenance', roles: ['EMPLOYEE', 'DEPARTMENT_HEAD', 'ASSET_MANAGER', 'ADMIN'] },
+    ],
+  },
+  {
+    title: 'Governance',
+    items: [
+      { href: '/audits', icon: ClipboardCheck, label: 'Audit Cycles', roles: ['ASSET_MANAGER', 'ADMIN', 'DEPARTMENT_HEAD'] },
+      { href: '/reports', icon: BarChart3, label: 'Reports & Analytics', roles: ['ASSET_MANAGER', 'ADMIN', 'DEPARTMENT_HEAD'] },
+      { href: '/org-setup', icon: Building2, label: 'Organization Setup', roles: ['ADMIN'] },
+    ],
+  },
 ]
 
-export function Sidebar({ role }: { role: string }) {
+export function Sidebar({ role, userName }: { role: string; userName?: string }) {
   const pathname = usePathname()
-
-  const visibleItems = navItems.filter(item => item.roles.includes(role))
 
   return (
     <nav className="sidebar">
       <div className="sidebar-logo">
-        <Package size={20} style={{ color: '#3b82f6' }} />
-        Asset<span>Flow</span>
+        <div className="logo-mark">
+          <Boxes size={18} />
+        </div>
+        <div className="logo-text">
+          Asset<span>Flow</span>
+        </div>
       </div>
 
       <div className="sidebar-nav">
-        <div className="sidebar-section">
-          {visibleItems.map(({ href, icon: Icon, label }) => (
-            <Link
-              key={href}
-              href={href}
-              className={`sidebar-item ${pathname.startsWith(href) ? 'active' : ''}`}
-            >
-              <Icon size={16} />
-              {label}
-            </Link>
-          ))}
-        </div>
+        {navSections.map(section => {
+          const visible = section.items.filter(item => item.roles.includes(role))
+          if (visible.length === 0) return null
+          return (
+            <div className="sidebar-section" key={section.title}>
+              <div className="sidebar-section-title">{section.title}</div>
+              {visible.map(({ href, icon: Icon, label }) => (
+                <Link
+                  key={href}
+                  href={href}
+                  className={`sidebar-item ${pathname.startsWith(href) ? 'active' : ''}`}
+                >
+                  <Icon size={16} />
+                  <span className="label">{label}</span>
+                </Link>
+              ))}
+            </div>
+          )
+        })}
       </div>
 
-      <div style={{ padding: '0.75rem', borderTop: '1px solid #1e293b' }}>
-        <div style={{ fontSize: '0.7rem', color: '#475569', padding: '0.25rem 0.75rem', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-          {role.replace('_', ' ')}
-        </div>
+      <div className="sidebar-footer">
+        <span className="role-chip">{role.replace(/_/g, ' ')}</span>
       </div>
     </nav>
   )

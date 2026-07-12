@@ -18,6 +18,7 @@ export default async function BookingsPage() {
       bookableAssets={bookableAssets as any}
       activeBookings={activeBookings as any}
       userId={session?.user?.id as string}
+      role={session?.user?.role as string}
     />
   )
 }

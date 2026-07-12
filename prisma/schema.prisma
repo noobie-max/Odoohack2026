@@ -3,8 +3,9 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
 }
 
 
@@ -98,6 +99,8 @@ model User {
   passwordHash        String
   role                Role      @default(EMPLOYEE)
   status              Status    @default(ACTIVE)
+  resetToken          String?   @unique
+  resetTokenExpiry    DateTime?
   departmentId        String?
   department          Department? @relation("DeptMembers", fields: [departmentId], references: [id])
   headOf              Department[] @relation("DeptHead")
@@ -134,6 +137,7 @@ model Asset {
   condition       String?
   location        String?
   photoUrl        String?
+  customFieldValues Json?
   isBookable      Boolean     @default(false)
   status          AssetStatus @default(AVAILABLE)
   departmentId    String?
@@ -189,6 +193,7 @@ model Booking {
   startTime     DateTime
   endTime       DateTime
   status        BookingStatus @default(UPCOMING)
+  reminderSentAt DateTime?
   createdAt     DateTime      @default(now())
 
   @@index([assetId, startTime, endTime])

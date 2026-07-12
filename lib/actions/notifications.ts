@@ -30,6 +30,7 @@ export async function getNotifications(filter?: 'ALL' | 'ALERTS' | 'APPROVALS' |
       'TRANSFER_REQUESTED',
       'TRANSFER_APPROVED',
       'TRANSFER_REJECTED',
+      'MAINTENANCE_REQUESTED',
       'MAINTENANCE_APPROVED',
       'MAINTENANCE_REJECTED',
       'MAINTENANCE_RESOLVED',
@@ -75,6 +76,9 @@ export async function getUnreadCount() {
 }
 
 export async function getActivityLogs(limit = 50) {
+  const user = await getUser()
+  if (user.role !== 'ADMIN' && user.role !== 'ASSET_MANAGER') return []
+
   return prisma.activityLog.findMany({
     include: { user: true },
     orderBy: { createdAt: 'desc' },

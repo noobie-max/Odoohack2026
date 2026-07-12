@@ -45,7 +45,7 @@ export async function raiseMaintenanceRequest(data: {
   for (const mgr of managers) {
     await createNotification({
       userId: mgr.id,
-      type: 'MAINTENANCE_APPROVED', // reusing type bucket
+      type: 'MAINTENANCE_REQUESTED',
       message: `New maintenance request for ${asset.tag} — ${parsed.data.priority || 'MEDIUM'} priority.`,
       entityType: 'MaintenanceRequest',
       entityId: request.id,
@@ -82,7 +82,7 @@ export async function approveMaintenanceRequest(requestId: string) {
 
   // Snapshot current holder before maintenance
   const currentAllocation = await prisma.allocation.findFirst({
-    where: { assetId: request.assetId, status: 'ACTIVE' },
+    where: { assetId: request.assetId, status: { in: ['ACTIVE', 'OVERDUE'] } },
   })
 
   await prisma.$transaction(async (tx) => {
@@ -95,10 +95,22 @@ export async function approveMaintenanceRequest(requestId: string) {
       },
     })
 
+    // Close the holder's allocation while the asset is in the shop
+    if (currentAllocation) {
+      await tx.allocation.update({
+        where: { id: currentAllocation.id },
+        data: {
+          status: 'RETURNED',
+          actualReturnDate: new Date(),
+          returnConditionNotes: 'Sent to maintenance',
+        },
+      })
+    }
+
     // §4.6: On APPROVED → asset status becomes UNDER_MAINTENANCE — the ONLY path to this status
     await tx.asset.update({
       where: { id: request.assetId },
-      data: { status: 'UNDER_MAINTENANCE' },
+      data: { status: 'UNDER_MAINTENANCE', currentHolderId: null },
     })
   })
 
@@ -194,9 +206,25 @@ export async function startMaintenanceProgress(requestId: string) {
   const user = await getUser()
   if (!can('maintenance.progress', user)) return { error: 'Unauthorized.' }
 
+  const request = await prisma.maintenanceRequest.findUnique({
+    where: { id: requestId },
+    include: { asset: true },
+  })
+  if (!request) return { error: 'Request not found.' }
+
   await prisma.maintenanceRequest.update({
     where: { id: requestId },
     data: { status: 'IN_PROGRESS' },
+  })
+
+  await prisma.activityLog.create({
+    data: {
+      userId: user.id,
+      action: 'maintenance.progress',
+      entityType: 'MaintenanceRequest',
+      entityId: requestId,
+      metadata: { assetTag: request.asset.tag, technicianName: request.technicianName },
+    },
   })
 
   revalidatePath('/maintenance')
@@ -235,6 +263,16 @@ export async function resolveMaintenanceRequest(requestId: string) {
     entityType: 'MaintenanceRequest',
     entityId: requestId,
   })
+
+  if (request.preMaintenanceHolderId && request.preMaintenanceHolderId !== request.raisedById) {
+    await createNotification({
+      userId: request.preMaintenanceHolderId,
+      type: 'MAINTENANCE_RESOLVED',
+      message: `Asset ${request.asset.tag} (${request.asset.name}) is back from maintenance and available again.`,
+      entityType: 'MaintenanceRequest',
+      entityId: requestId,
+    })
+  }
 
   await prisma.activityLog.create({
     data: {

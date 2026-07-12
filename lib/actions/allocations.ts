@@ -30,7 +30,7 @@ export async function allocateAsset(data: {
     where: { id: parsed.data.assetId },
     include: {
       allocations: {
-        where: { status: 'ACTIVE' },
+        where: { status: { in: ['ACTIVE', 'OVERDUE'] } },
         include: { employee: { include: { department: true } } },
         take: 1,
       },
@@ -190,7 +190,7 @@ export async function requestTransfer(data: {
     where: { id: parsed.data.assetId },
     include: {
       allocations: {
-        where: { status: 'ACTIVE' },
+        where: { status: { in: ['ACTIVE', 'OVERDUE'] } },
         include: { employee: true },
         take: 1,
       },
@@ -198,6 +198,10 @@ export async function requestTransfer(data: {
   })
 
   if (!asset) return { error: 'Asset not found.' }
+
+  if (asset.status !== 'ALLOCATED') {
+    return { error: 'This asset has no current holder — transfers only apply to allocated assets. Use direct allocation instead.' }
+  }
 
   const currentAllocation = asset.allocations[0]
   const fromEmployeeId = currentAllocation?.employeeId || user.id
@@ -274,8 +278,12 @@ export async function approveTransfer(transferId: string) {
   await prisma.$transaction(async (tx) => {
     // Close old allocation
     await tx.allocation.updateMany({
-      where: { assetId: transfer.assetId, status: 'ACTIVE' },
-      data: { status: 'RETURNED', actualReturnDate: new Date() },
+      where: { assetId: transfer.assetId, status: { in: ['ACTIVE', 'OVERDUE'] } },
+      data: {
+        status: 'RETURNED',
+        actualReturnDate: new Date(),
+        returnConditionNotes: `Transferred to ${transfer.toEmployee.name}`,
+      },
     })
 
     // Create new allocation
@@ -289,10 +297,10 @@ export async function approveTransfer(transferId: string) {
       },
     })
 
-    // Update asset holder
+    // Update asset holder + status
     await tx.asset.update({
       where: { id: transfer.assetId },
-      data: { currentHolderId: transfer.toEmployeeId },
+      data: { status: 'ALLOCATED', currentHolderId: transfer.toEmployeeId },
     })
 
     // Update transfer record
@@ -382,6 +390,8 @@ export async function getActiveAllocations() {
   const session = await getServerSession(authOptions)
   if (!session?.user) return []
 
+  await recomputeOverdueAllocations()
+
   return prisma.allocation.findMany({
     where: { status: { in: ['ACTIVE', 'OVERDUE'] } },
     include: {
@@ -409,17 +419,25 @@ export async function recomputeOverdueAllocations() {
   const now = new Date()
   const overdueAllocations = await prisma.allocation.findMany({
     where: {
-      status: 'ACTIVE',
+      status: { in: ['ACTIVE', 'OVERDUE'] },
       expectedReturnDate: { lt: now },
     },
     include: { asset: true, employee: true },
   })
 
+  if (overdueAllocations.length === 0) return { processed: 0 }
+
+  const managers = await prisma.user.findMany({
+    where: { role: { in: ['ASSET_MANAGER', 'ADMIN'] } },
+  })
+
   for (const allocation of overdueAllocations) {
-    await prisma.allocation.update({
-      where: { id: allocation.id },
-      data: { status: 'OVERDUE' },
-    })
+    if (allocation.status === 'ACTIVE') {
+      await prisma.allocation.update({
+        where: { id: allocation.id },
+        data: { status: 'OVERDUE' },
+      })
+    }
 
     // Only send notification once
     if (!allocation.overdueNotifiedAt) {
@@ -427,13 +445,23 @@ export async function recomputeOverdueAllocations() {
         where: { id: allocation.id },
         data: { overdueNotifiedAt: now },
       })
+      const dueDate = allocation.expectedReturnDate?.toLocaleDateString()
       await createNotification({
         userId: allocation.employeeId,
         type: 'OVERDUE_RETURN',
-        message: `Asset ${allocation.asset.tag} (${allocation.asset.name}) was due for return on ${allocation.expectedReturnDate?.toLocaleDateString()}. Please return it immediately.`,
+        message: `Asset ${allocation.asset.tag} (${allocation.asset.name}) was due for return on ${dueDate}. Please return it immediately.`,
         entityType: 'Allocation',
         entityId: allocation.id,
       })
+      for (const mgr of managers) {
+        await createNotification({
+          userId: mgr.id,
+          type: 'OVERDUE_RETURN',
+          message: `Asset ${allocation.asset.tag} (${allocation.asset.name}) held by ${allocation.employee.name} is overdue since ${dueDate}.`,
+          entityType: 'Allocation',
+          entityId: allocation.id,
+        })
+      }
     }
   }
 

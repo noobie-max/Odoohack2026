@@ -292,10 +292,10 @@ async function main() {
       assetId: dellLaptop.id,
       employeeId: priyaShah.id,
       departmentId: engDept.id,
-      allocatedDate: new Date('2024-01-20'),
-      expectedReturnDate: new Date('2024-06-30'), // overdue
+      allocatedDate: new Date(Date.now() - 175 * 24 * 60 * 60 * 1000),
+      expectedReturnDate: new Date(Date.now() - 12 * 24 * 60 * 60 * 1000), // overdue
       status: 'OVERDUE',
-      overdueNotifiedAt: new Date('2024-07-01'),
+      overdueNotifiedAt: new Date(Date.now() - 11 * 24 * 60 * 60 * 1000),
     },
   })
 
@@ -305,10 +305,10 @@ async function main() {
       assetId: ups.id,
       employeeId: rajKumar.id,
       departmentId: engDept.id,
-      allocatedDate: new Date('2024-02-01'),
-      expectedReturnDate: new Date('2024-05-01'), // overdue
+      allocatedDate: new Date(Date.now() - 150 * 24 * 60 * 60 * 1000),
+      expectedReturnDate: new Date(Date.now() - 40 * 24 * 60 * 60 * 1000), // overdue
       status: 'OVERDUE',
-      overdueNotifiedAt: new Date('2024-05-02'),
+      overdueNotifiedAt: new Date(Date.now() - 39 * 24 * 60 * 60 * 1000),
     },
   })
 
@@ -484,10 +484,10 @@ async function main() {
   // ─── Audit Cycle ──────────────────────────────────────────────────────────
   const auditCycle = await prisma.auditCycle.create({
     data: {
-      name: 'Q3 2024 — Engineering Department Audit',
+      name: 'Q3 — Engineering Department Audit',
       scopeDepartmentId: engDept.id,
-      startDate: new Date('2024-07-01'),
-      endDate: new Date('2024-07-31'),
+      startDate: new Date(Date.now() - 11 * 24 * 60 * 60 * 1000),
+      endDate: new Date(Date.now() + 20 * 24 * 60 * 60 * 1000),
       status: 'OPEN',
       auditors: { connect: [{ id: assetManager.id }, { id: deptHeadEng.id }] },
     },
@@ -541,12 +541,12 @@ async function main() {
       // ALERTS bucket
       {
         userId: adminUser.id, type: 'OVERDUE_RETURN',
-        message: 'Asset AF-0001 (Dell Laptop XPS 15) is overdue for return — Priya Shah, due Jun 30.',
+        message: 'Asset AF-0001 (Dell Laptop XPS 15) is overdue for return — Priya Shah.',
         createdAt: new Date(Date.now() - 2 * 60 * 1000),
       },
       {
         userId: assetManager.id, type: 'AUDIT_DISCREPANCY_FLAGGED',
-        message: 'Audit discrepancy: Asset AF-0002 flagged as DAMAGED in "Q3 2024 — Engineering Department Audit".',
+        message: 'Audit discrepancy: Asset AF-0002 flagged as DAMAGED in "Q3 — Engineering Department Audit".',
         createdAt: new Date(Date.now() - 18 * 60 * 1000),
       },
       {
@@ -599,7 +599,7 @@ async function main() {
       {
         userId: adminUser.id, action: 'asset.allocate', entityType: 'Allocation', entityId: priyaAllocation.id,
         metadata: { assetTag: 'AF-0001', assetName: 'Dell Laptop XPS 15', employeeName: 'Priya Shah' },
-        createdAt: new Date('2024-01-20'),
+        createdAt: new Date(Date.now() - 175 * 24 * 60 * 60 * 1000),
       },
       {
         userId: vikramSingh.id, action: 'booking.create', entityType: 'Booking', entityId: existingBooking.id,
@@ -624,7 +624,7 @@ async function main() {
       {
         userId: assetManager.id, action: 'asset.register', entityType: 'Asset', entityId: dellLaptop.id,
         metadata: { tag: 'AF-0001', name: 'Dell Laptop XPS 15' },
-        createdAt: new Date('2024-01-15'),
+        createdAt: new Date(Date.now() - 540 * 24 * 60 * 60 * 1000),
       },
     ],
   })

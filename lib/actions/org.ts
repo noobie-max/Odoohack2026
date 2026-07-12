@@ -68,6 +68,16 @@ export async function updateDepartment(
     },
   })
 
+  await prisma.activityLog.create({
+    data: {
+      userId: user.id,
+      action: 'dept.update',
+      entityType: 'Department',
+      entityId: dept.id,
+      metadata: { name: dept.name, changes: Object.keys(data) },
+    },
+  })
+
   revalidatePath('/org-setup')
   return { success: true, dept }
 }
@@ -123,6 +133,16 @@ export async function updateCategory(
     data: updateData,
   })
 
+  await prisma.activityLog.create({
+    data: {
+      userId: user.id,
+      action: 'category.update',
+      entityType: 'AssetCategory',
+      entityId: category.id,
+      metadata: { name: category.name, changes: Object.keys(data) },
+    },
+  })
+
   revalidatePath('/org-setup')
   return { success: true, category }
 }
@@ -166,7 +186,18 @@ export async function updateUserStatus(userId: string, status: 'ACTIVE' | 'INACT
   const user = await getUser()
   if (!can('user.promote', user)) return { error: 'Unauthorized' }
 
-  await prisma.user.update({ where: { id: userId }, data: { status } })
+  const updated = await prisma.user.update({ where: { id: userId }, data: { status } })
+
+  await prisma.activityLog.create({
+    data: {
+      userId: user.id,
+      action: 'user.status',
+      entityType: 'User',
+      entityId: userId,
+      metadata: { name: updated.name, status },
+    },
+  })
+
   revalidatePath('/org-setup')
   return { success: true }
 }

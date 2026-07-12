@@ -24,6 +24,8 @@ export const assetSchema = z.object({
   location: z.string().optional(),
   isBookable: z.boolean().default(false),
   departmentId: z.string().optional(),
+  photoUrl: z.string().optional(),
+  customFieldValues: z.record(z.string(), z.string()).optional(),
 })
 
 // Allocation

@@ -1,8 +1,13 @@
 'use server'
 
 import { prisma } from '@/lib/prisma'
+import { recomputeOverdueAllocations } from './allocations'
+import { syncBookingStatuses } from './bookings'
 
 export async function getDashboardKPIs() {
+  await recomputeOverdueAllocations()
+  await syncBookingStatuses()
+
   const now = new Date()
 
   const [
@@ -18,7 +23,9 @@ export async function getDashboardKPIs() {
   ] = await Promise.all([
     prisma.asset.count({ where: { status: 'AVAILABLE' } }),
     prisma.asset.count({ where: { status: 'ALLOCATED' } }),
-    prisma.asset.count({ where: { status: 'UNDER_MAINTENANCE' } }),
+    prisma.maintenanceRequest.count({
+      where: { status: { in: ['APPROVED', 'TECHNICIAN_ASSIGNED', 'IN_PROGRESS'] } },
+    }),
     prisma.booking.count({
       where: {
         status: { in: ['UPCOMING', 'ONGOING'] },
@@ -63,6 +70,7 @@ export async function getDashboardKPIs() {
     pendingTransfers,
     overdueCount: overdueAllocations,
     pendingMaintenance,
+    pendingMaintenanceCount: pendingMaintenance,
     upcomingReturns,
     recentActivity: recentActivity.map((log) => ({
       id: log.id,

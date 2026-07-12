@@ -1,6 +1,7 @@
 'use server'
 
 import { prisma } from '@/lib/prisma'
+import { plain } from '@/lib/serialize'
 import { can } from '@/lib/rbac'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
@@ -290,12 +291,12 @@ export async function resolveMaintenanceRequest(requestId: string) {
 }
 
 export async function getMaintenanceRequests() {
-  return prisma.maintenanceRequest.findMany({
+  return plain(await prisma.maintenanceRequest.findMany({
     include: {
       asset: { include: { category: true } },
       raisedBy: { include: { department: true } },
       approvedBy: true,
     },
     orderBy: { createdAt: 'desc' },
-  })
+  }))
 }

@@ -9,7 +9,6 @@
 -- so the app can connect to the same database via DATABASE_URL with zero
 -- mapping changes.
 -- ============================================================================
-
 -- ─── Enums ──────────────────────────────────────────────────────────────────
 
 CREATE TYPE "Role" AS ENUM ('EMPLOYEE', 'DEPARTMENT_HEAD', 'ASSET_MANAGER', 'ADMIN');
@@ -24,7 +23,6 @@ CREATE TYPE "AuditCycleStatus" AS ENUM ('OPEN', 'CLOSED');
 CREATE TYPE "Priority" AS ENUM ('LOW', 'MEDIUM', 'HIGH', 'CRITICAL');
 
 -- ─── Core organisation tables ───────────────────────────────────────────────
-
 CREATE TABLE "Department" (
     "id"        TEXT NOT NULL,
     "name"      TEXT NOT NULL,

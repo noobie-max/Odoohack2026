@@ -1,6 +1,7 @@
 'use server'
 
 import { prisma } from '@/lib/prisma'
+import { plain } from '@/lib/serialize'
 import { recomputeOverdueAllocations } from './allocations'
 import { syncBookingStatuses } from './bookings'
 
@@ -71,7 +72,7 @@ export async function getDashboardKPIs() {
     overdueCount: overdueAllocations,
     pendingMaintenance,
     pendingMaintenanceCount: pendingMaintenance,
-    upcomingReturns,
+    upcomingReturns: plain(upcomingReturns),
     recentActivity: recentActivity.map((log) => ({
       id: log.id,
       action: log.action,

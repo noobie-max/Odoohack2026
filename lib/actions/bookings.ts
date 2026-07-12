@@ -1,6 +1,7 @@
 'use server'
 
 import { prisma } from '@/lib/prisma'
+import { plain } from '@/lib/serialize'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { bookingSchema } from '@/lib/validators'
@@ -87,7 +88,7 @@ export async function createBooking(data: {
 
   revalidatePath('/bookings')
   revalidatePath('/dashboard')
-  return { success: true, booking }
+  return { success: true, booking: plain(booking) }
 }
 
 export async function cancelBooking(bookingId: string) {
@@ -275,14 +276,14 @@ export async function getActiveBookings() {
   await syncBookingStatuses()
 
   const now = new Date()
-  return prisma.booking.findMany({
+  return plain(await prisma.booking.findMany({
     where: {
       status: { in: ['UPCOMING', 'ONGOING'] },
       endTime: { gt: now },
     },
     include: { asset: true, requestedBy: true },
     orderBy: { startTime: 'asc' },
-  })
+  }))
 }
 
 function formatTime(date: Date) {

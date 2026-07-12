@@ -1,6 +1,7 @@
 'use server'
 
 import { prisma } from '@/lib/prisma'
+import { plain } from '@/lib/serialize'
 import { can } from '@/lib/rbac'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
@@ -392,18 +393,18 @@ export async function getActiveAllocations() {
 
   await recomputeOverdueAllocations()
 
-  return prisma.allocation.findMany({
+  return plain(await prisma.allocation.findMany({
     where: { status: { in: ['ACTIVE', 'OVERDUE'] } },
     include: {
       asset: { include: { category: true } },
       employee: { include: { department: true } },
     },
     orderBy: { allocatedDate: 'desc' },
-  })
+  }))
 }
 
 export async function getPendingTransfers() {
-  return prisma.transferRequest.findMany({
+  return plain(await prisma.transferRequest.findMany({
     where: { status: 'REQUESTED' },
     include: {
       asset: true,
@@ -411,7 +412,7 @@ export async function getPendingTransfers() {
       toEmployee: { include: { department: true } },
     },
     orderBy: { requestedAt: 'desc' },
-  })
+  }))
 }
 
 // §4.4 Mark overdue allocations

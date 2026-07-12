@@ -6,6 +6,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { assetSchema } from '@/lib/validators'
 import { revalidatePath } from 'next/cache'
+import { plain } from '@/lib/serialize'
 import { AssetStatus, Prisma } from '@prisma/client'
 
 async function getUser() {
@@ -95,7 +96,7 @@ export async function registerAsset(data: {
   })
 
   revalidatePath('/assets')
-  return { success: true, asset }
+  return { success: true, asset: plain(asset) }
 }
 
 export async function updateAsset(
@@ -128,7 +129,7 @@ export async function updateAsset(
   })
 
   revalidatePath('/assets')
-  return { success: true, asset }
+  return { success: true, asset: plain(asset) }
 }
 
 export async function getAssets(filters?: {
@@ -174,7 +175,7 @@ export async function getAssets(filters?: {
     where.AND = [{ OR: scope }]
   }
 
-  return prisma.asset.findMany({
+  return plain(await prisma.asset.findMany({
     where,
     include: {
       category: true,
@@ -190,7 +191,7 @@ export async function getAssets(filters?: {
       },
     },
     orderBy: { tag: 'asc' },
-  })
+  }))
 }
 
 export async function setAssetStatus(
@@ -248,7 +249,7 @@ export async function setAssetStatus(
 }
 
 export async function getAssetDetail(assetId: string) {
-  return prisma.asset.findUnique({
+  return plain(await prisma.asset.findUnique({
     where: { id: assetId },
     include: {
       category: true,
@@ -266,5 +267,5 @@ export async function getAssetDetail(assetId: string) {
         orderBy: { requestedAt: 'desc' },
       },
     },
-  })
+  }))
 }

@@ -1,6 +1,7 @@
 'use server'
 
 import { prisma } from '@/lib/prisma'
+import { plain } from '@/lib/serialize'
 import { can } from '@/lib/rbac'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
@@ -201,7 +202,7 @@ export async function closeAuditCycle(cycleId: string) {
 }
 
 export async function getAuditCycles() {
-  return prisma.auditCycle.findMany({
+  return plain(await prisma.auditCycle.findMany({
     include: {
       auditors: true,
       items: {
@@ -210,11 +211,11 @@ export async function getAuditCycles() {
       _count: { select: { items: true } },
     },
     orderBy: { createdAt: 'desc' },
-  })
+  }))
 }
 
 export async function getAuditCycleDetail(cycleId: string) {
-  return prisma.auditCycle.findUnique({
+  return plain(await prisma.auditCycle.findUnique({
     where: { id: cycleId },
     include: {
       auditors: true,
@@ -225,5 +226,5 @@ export async function getAuditCycleDetail(cycleId: string) {
         orderBy: { asset: { tag: 'asc' } },
       },
     },
-  })
+  }))
 }
